@@ -85,16 +85,27 @@ app.addDownloadLink = function (id, title, newTitle) {
     return;
   }
   var elUL = elULs[0];
-  var elLI = document.createElement("li");
-  var elA = document.createElement("a");
-  var directURL = "https://arxiv.org/pdf/" + id + ".pdf?download";
-  elA.innerText = "Direct Download";
-  elA.setAttribute("href", directURL);
-  elA.setAttribute("download", fileName);
-  elA.setAttribute("type", "application/pdf");
-  elLI.appendChild(elA);
-  elUL.appendChild(elLI)
+  
+  function makeListItem(url, text, cb){
+    var elLI = document.createElement("li");
+    var elA = document.createElement("a");
+    elA.innerText = text;
+    elA.setAttribute("href", url);
+    cb(elA);
+    elLI.appendChild(elA);
+    return elLI
+  };
+  
+  var dl_link = makeListItem("https://arxiv.org/pdf/" + id + ".pdf?download", "Direct Download", function(el){
+    el.setAttribute("download", fileName);
+    el.setAttribute("type", "application/pdf");
+  })
+  elUL.appendChild(dl_link)
   console.log(app.name, "Added direct download link.")
+  
+  elUL.appendChild(makeListItem("https://www.arxiv-vanity.com/papers/" + id, "Arxiv-Vanity", function(el){}));
+  console.log(app.name, "Added vanity link link.")
+
   // For Firefox, add meta tag to force download.
   // var elHeads = document.getElementsByTagName("head");
   // if (elHeads.length === 0) {
