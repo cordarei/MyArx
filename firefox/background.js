@@ -10,20 +10,32 @@ app.pdfviewerTarget = "pdfviewer.html?target=";
 //       we capture only the last url (the one that ends with '.pdf').
 // Adding some extra parameter such as https://arxiv.org/pdf/<id>.pdf?download can bypass this capture.
 app.redirectPattern = "*://arxiv.org/*.pdf";
+app.absRedirectPattern = "*://arxiv.org/*.pdf?abstract";
+app.viewerRedirectPattern = "*://arxiv.org/*.pdf?viewer";
 // Return the type parsed from the url. (Returns "PDF" or "Abstract")
 app.getType = function (url) {
-  if (url.endsWith(".pdf")) {
+  if (url.endsWith(".pdf") || url.endsWith(".pdf?viewer")) {
     return "PDF";
+  } else {
+    return "Abstract";
   }
-  return "Abstract";
 }
+
 // Return the id parsed from the url.
 app.getId = function (url, type) {
   var match;
-  if (type === "PDF") {
+  if (url.endsWith(".pdf")) {
     // match = url.match(/arxiv.org\/pdf\/([\S]*)\.pdf$/);
     // Must use below for other PDF serving URL.
     match = url.match(/arxiv.org\/[\S]*\/([^\/]*)\.pdf$/);
+    // The first match is the matched string, the second one is the captured group.
+    if (match === null || match.length !== 2) {
+      return null;
+    }
+  } else if (url.endsWith(".pdf?viewer")) {
+    // match = url.match(/arxiv.org\/pdf\/([\S]*)\.pdf$/);
+    // Must use below for other PDF serving URL.
+    match = url.match(/arxiv.org\/[\S]*\/([^\/]*)\.pdf\?viewer$/);
     // The first match is the matched string, the second one is the captured group.
     if (match === null || match.length !== 2) {
       return null;
@@ -37,6 +49,7 @@ app.getId = function (url, type) {
   }
   return match[1];
 }
+
 // Open the abstract / PDF page using the current URL.
 app.openAbstractTab = function (activeTabIdx, url, type) {
   // Retrieve the abstract url by modifying the original url.
@@ -66,11 +79,11 @@ app.checkURL = function (url) {
   // var matchPDF = url.match(/arxiv.org\/pdf\/([\S]*)\.pdf$/);
   // Must use below for other PDF serving URL.
   var matchPDF = url.match(/arxiv.org\/[\S]*\/([^\/]*)\.pdf$/);
+  var matchPDFViewer = url.match(/arxiv.org\/[\S]*\/([^\/]*)\.pdf\?viewer$/);
+  var matchPDFToAbs = url.match(/arxiv.org\/[\S]*\/([^\/]*)\.pdf\?abstract/);
   var matchAbs = url.match(/arxiv.org\/abs\/([\S]*)$/);
-  if (matchPDF !== null || matchAbs !== null) {
-    return true;
-  }
-  return false;
+  console.log(url);
+  return (matchPDF !== null || matchPDFViewer !== null || matchPDFToAbs !== null || matchAbs !== null);
 }
 // Called when the url of a tab changes.
 app.updateBrowserActionState = function (tabId, changeInfo, tab) {
@@ -122,10 +135,43 @@ chrome.tabs.onUpdated.addListener(app.updateBrowserActionState);
 // Extension button click to modify title.
 chrome.browserAction.onClicked.addListener(app.run);
 // Redirect the PDF page to custom PDF container page.
+// chrome.webRequest.onBeforeRequest.addListener(
+//   app.redirect,
+//   { urls: [app.redirectPattern] },
+//   ["blocking"]
+// );
+//
 chrome.webRequest.onBeforeRequest.addListener(
-  app.redirect,
-  { urls: [app.redirectPattern] },
+  (requestDetails) => {
+    const url = requestDetails.url;
+    if (url.endsWith(".pdf")) {
+      return {
+        redirectUrl: "https://arxiv.org/abs/" + app.getId(requestDetails.url, "PDF")
+      };
+    }
+  },
+  { urls: ["*://arxiv.org/*.pdf$"] },
   ["blocking"]
 );
+chrome.webRequest.onBeforeRequest.addListener(
+  (requestDetails) => {
+    // Redirect to custom PDF page.
+    console.log("in viewer redirect, requesturl is", requestDetails.documentUrl, requestDetails.url)
+    if (requestDetails.documentUrl !== undefined) {
+      // Request from this plugin itself (embedded PDF).
+      return;
+    }
+    console.log("viewer found, redirecting")
+    const url = chrome.runtime.getURL(
+      app.pdfviewerTarget + requestDetails.url.replace(/\?viewer$/, '')
+    );
+    console.log(app.name, "Redirecting: " + requestDetails.url + " to " + url);
+    return { redirectUrl: url };
+  },
+  { urls: ["*://arxiv.org/pdf/*viewer$"] },
+  ["blocking"]
+);
+
+
 // Capture bookmarking custom PDF page.
 chrome.bookmarks.onCreated.addListener(app.modifyBookmark);

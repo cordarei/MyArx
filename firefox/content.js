@@ -78,15 +78,19 @@ app.insertTitle = function (id, title, newTitle) {
 }
 // Add a direct download link if is abstract page.
 app.addDownloadLink = function (id, title, newTitle) {
-  var fileName = `${title}, ${app.firstAuthor} et al., ${app.publishedYear}.pdf`;
+  const fileName = `${title}, ${app.firstAuthor} et al., ${app.publishedYear}.pdf`;
   var elULs = document.querySelectorAll(".full-text > ul");
   if (elULs.length === 0) {
     console.log(app.name, "Error: Items selected by '.full-text > ul' not found");
     return;
   }
-  var elUL = elULs[0];
-  
-  function makeListItem(url, text, cb){
+  const appendTo = (list) => {
+    return (a) => {
+      list.appendChild(a);
+      console.log(app.name, "Added "+a.innerText+" link.")
+    };
+  }
+  const makeListItem = (url, text, cb) => {
     var elLI = document.createElement("li");
     var elA = document.createElement("a");
     elA.innerText = text;
@@ -95,16 +99,42 @@ app.addDownloadLink = function (id, title, newTitle) {
     elLI.appendChild(elA);
     return elLI
   };
-  
-  var dl_link = makeListItem("https://arxiv.org/pdf/" + id + ".pdf?download", "Direct Download", function(el){
-    el.setAttribute("download", fileName);
-    el.setAttribute("type", "application/pdf");
-  })
-  elUL.appendChild(dl_link)
-  console.log(app.name, "Added direct download link.")
-  
-  elUL.appendChild(makeListItem("https://www.arxiv-vanity.com/papers/" + id, "Arxiv-Vanity", function(el){}));
-  console.log(app.name, "Added vanity link link.")
+
+  const addLink = appendTo(elULs[0]);
+
+  addLink(
+    makeListItem(
+      "https://arxiv.org/pdf/" + id + ".pdf?download",
+      "Direct Download",
+      (el)=>{
+        el.setAttribute("download", fileName);
+        el.setAttribute("type", "application/pdf");
+      })
+  )
+
+  addLink(
+    makeListItem(
+      "https://arxiv.org/pdf/" + id + ".pdf?viewer",
+      "Viewer",
+      (el)=>{ }
+    )
+  )
+
+  addLink(
+    makeListItem(
+      "https://arxiv.org/pdf/" + id + ".pdf?abstract",
+      "abstract redirect",
+      (el)=>{ }
+    )
+  )
+
+  addLink(
+    makeListItem(
+      "https://www.arxiv-vanity.com/papers/" + id,
+      "Arxiv-Vanity",
+      (el)=>{ }
+    )
+  )
 
   // For Firefox, add meta tag to force download.
   // var elHeads = document.getElementsByTagName("head");
