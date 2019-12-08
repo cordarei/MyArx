@@ -8,10 +8,14 @@
     "content_scripts": [{
         "matches": ["*://arxiv.org/abs/*"],
         "js": ["content.js"],
-        "run_at": "document_end"
+        "run_at": "document_idle"
     }, {
-      "matches": ["<all_urls>"],
-      "js": ["arxiv-url.js"]
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": ["myarxiv.js"],
+      "run_at": "document_idle"
     }],
     "browser_action": {
         "default_icon": {
@@ -26,8 +30,8 @@
         "webRequest",
         "webRequestBlocking",
         "bookmarks",
-        "*://export.arxiv.org/*",
-        "*://arxiv.org/*"
+        "http://*/*",
+        "https://*/*"
     ],
     "content_security_policy": "script-src 'self'; object-src 'self' https://arxiv.org;",
     "web_accessible_resources": [

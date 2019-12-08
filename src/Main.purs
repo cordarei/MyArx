@@ -2,94 +2,61 @@ module Main where
 
 import Prelude
 import Control.Alt
+import Control.Monad (unlessM)
+import Control.Monad.Maybe.Trans (runMaybeT, MaybeT(..))
+import Control.Monad.Except.Trans (runExceptT, except, throwError, ExceptT(..))
+import Control.Monad.Trans.Class (lift)
 import Data.Maybe (Maybe(Just, Nothing))
-import Data.Either (Either(Left, Right))
+import Data.Either -- (Either(Left, Right), note, either)
 import Data.Tuple (Tuple(Tuple))
 import Effect (Effect, foreachE)
 import Effect.Console (log)
 
 import Web.DOM.Document (Document, getElementsByTagName)
-import Web.DOM.Element (getAttribute, setAttribute)
-import Web.DOM.HTMLCollection (HTMLCollection)
+import Web.DOM.Element (Element, getAttribute, setAttribute)
+import Web.DOM.HTMLCollection (HTMLCollection, toArray)
 import Web.HTML (window)
-import Web.HTML.Window (location, document)
+import Web.HTML.HTMLDocument (toDocument)
 import Web.HTML.Location (hostname)
+import Web.HTML.Window (location, document)
+import Effect.Timer
 
-import Data.Array as Array
-import Data.String.CodeUnits (fromCharArray, toCharArray)
-import Text.Parsing.Parser
-import Text.Parsing.Parser.Combinators
-import Text.Parsing.Parser.String
-import Text.Parsing.Parser.Token
+import ArxivUrlParser
 
 main :: Effect Unit
 main = do
   log "Hello sailor!"
   currentDomain >>= log
+  void $ setTimeout 2000 swapArxivAnchors
 
 currentDomain :: Effect String
 currentDomain = window >>= (location >=> hostname)
 
 inArxiv :: String -> Boolean
-inArxiv s = not $ s == "arxiv.org"
+inArxiv s = s == "arxiv.org"
 
 getAnchors :: Document -> Effect HTMLCollection
 getAnchors = getElementsByTagName "a"
 
-data PageType = PDF | Abstract
-newtype ArxivId = ArxivId String
-
-absURL :: ArxivId -> String
-absURL (ArxivId i)= "https://www.arxiv.org/abs/" <> i
-
-arxivParser :: Parser String (Tuple PageType ArxivId)
-arxivParser = protocol *> domain *> page
-  where
-    protocol :: Parser String Unit
-    protocol = do
-      void (string "http")
-      optional (char 's')
-      void (string "://")
-
-    domain :: Parser String Unit
-    domain = do
-      optional (string "www.")
-      void (string "arxiv.org/")
-
-    page :: Parser String (Tuple PageType ArxivId)
-    page = do
-      stype <- try (string "pdf") <|> string "abs"
-      void (char '/')
-      l <- fromCharArray <$> Array.many digit
-      void (char '.')
-      r <- fromCharArray <$> Array.many digit
-      pure $ Tuple (if stype == "pdf" then PDF else Abstract) (ArxivId $ l <> "." <> r)
-
 swapArxivAnchors :: Effect Unit
-swapArxivAnchors = currentDomain >>= \d -> do
-  if inArxiv d
-  then pure unit
-  else do
-    as <- getAnchors =<< document =<< window
-    foreachE as $ \a -> do
-      mlink <- getAttribute "href" a
-      case mlink of
-        Nothing -> pure unit
-        Just link -> case runParser arxivParser link of
-            Left _ -> pure unit
-            Right (Tuple atype aid) -> do
-               setAttribute "href" (absURL aid) a
+swapArxivAnchors = unlessM (inArxiv <$> currentDomain) do
+  log "in something not arxiv"
+  window >>= document >>= toDocument >>> getAnchors >>= toArray >>= flip foreachE processLink
+  where
+    processLink :: Element -> Effect Unit
+    processLink a = runMaybeT (getLink a) >>= case _ of
+      Nothing -> pure unit
+      Just link -> do
+        log link
+        runExceptT (rewritePDFlinks a link) >>= case _ of
+          Left err ->pure unit
+          Right _ -> log $ "rewrote " <> link
 
--- let current_domain = window.location.hostname;
--- if (current_domain !== "arxiv.org") {
---     let arxiv_pdf_pattern = /http(s)?:\/\/[www.]?arxiv.org\/pdf\//;
---     let anchors = document.getElementsByTagName('a');
---     for (let anchor of anchors) {
---         let href_ = anchor.href;
---         if (href_.search(arxiv_pdf_pattern) != -1) {
---             href_ = href_.replace(".pdf", "");
---             href_ = href_.replace("arxiv.org/pdf/", "arxiv.org/abs/");
---             anchor.href = href_;
---         }
---     }
--- }
+    getLink :: Element -> MaybeT Effect String
+    getLink anchor = MaybeT $ getAttribute "href" anchor
+
+    rewritePDFlinks :: Element -> String -> ExceptT String Effect Unit
+    rewritePDFlinks a s = do
+      Tuple atype aid <- runArxivParser s
+      if (atype == PDF) then (lift $ setAttribute "href" (absURL aid) a) else throwError "skipped abstract link"
+
