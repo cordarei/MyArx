@@ -1,27 +1,24 @@
 module Main where
 
-import Prelude
-import Control.Alt
-import Control.Monad (unlessM)
-import Control.Monad.Maybe.Trans (runMaybeT, MaybeT(..))
-import Control.Monad.Except.Trans (runExceptT, except, throwError, ExceptT(..))
-import Control.Monad.Trans.Class (lift)
+import Prelude (Unit, discard, eq, flip, pure, unit, unlessM, void, when, ($), (<>), (==), (>=>), (>>=), (>>>))
+import Control.Monad.Except.Trans (runExceptT)
+import Data.Either (Either(..))
 import Data.Maybe (Maybe(Just, Nothing))
-import Data.Either -- (Either(Left, Right), note, either)
 import Data.Tuple (Tuple(Tuple))
 import Effect (Effect, foreachE)
 import Effect.Console (log)
+import Effect.Timer (setTimeout)
 
-import Web.DOM.Document (Document, getElementsByTagName)
+import Web.DOM.Document (getElementsByTagName)
 import Web.DOM.Element (Element, getAttribute, setAttribute)
-import Web.DOM.HTMLCollection (HTMLCollection, toArray)
+import Web.DOM.HTMLCollection (toArray)
 import Web.HTML (window)
 import Web.HTML.HTMLDocument (toDocument)
 import Web.HTML.Location (hostname)
 import Web.HTML.Window (location, document)
-import Effect.Timer
 
-import ArxivUrlParser
+import ArxivUrlParser (PageType(..), absURL, runArxivParser)
+
 
 main :: Effect Unit
 main = do
