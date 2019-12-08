@@ -2,14 +2,17 @@ module Main where
 
 import Prelude
 import Control.Alt
+import Data.Maybe (Maybe(Just, Nothing))
+import Data.Either (Either(Left, Right))
 import Data.Tuple (Tuple(Tuple))
-import Effect (Effect)
+import Effect (Effect, foreachE)
 import Effect.Console (log)
 
 import Web.DOM.Document (Document, getElementsByTagName)
+import Web.DOM.Element (getAttribute, setAttribute)
 import Web.DOM.HTMLCollection (HTMLCollection)
 import Web.HTML (window)
-import Web.HTML.Window (location)
+import Web.HTML.Window (location, document)
 import Web.HTML.Location (hostname)
 
 import Data.Array as Array
@@ -36,6 +39,9 @@ getAnchors = getElementsByTagName "a"
 data PageType = PDF | Abstract
 newtype ArxivId = ArxivId String
 
+absURL :: ArxivId -> String
+absURL (ArxivId i)= "https://www.arxiv.org/abs/" <> i
+
 arxivParser :: Parser String (Tuple PageType ArxivId)
 arxivParser = protocol *> domain *> page
   where
@@ -58,6 +64,21 @@ arxivParser = protocol *> domain *> page
       void (char '.')
       r <- fromCharArray <$> Array.many digit
       pure $ Tuple (if stype == "pdf" then PDF else Abstract) (ArxivId $ l <> "." <> r)
+
+swapArxivAnchors :: Effect Unit
+swapArxivAnchors = currentDomain >>= \d -> do
+  if inArxiv d
+  then pure unit
+  else do
+    as <- getAnchors =<< document =<< window
+    foreachE as $ \a -> do
+      mlink <- getAttribute "href" a
+      case mlink of
+        Nothing -> pure unit
+        Just link -> case runParser arxivParser link of
+            Left _ -> pure unit
+            Right (Tuple atype aid) -> do
+               setAttribute "href" (absURL aid) a
 
 -- let current_domain = window.location.hostname;
 -- if (current_domain !== "arxiv.org") {
