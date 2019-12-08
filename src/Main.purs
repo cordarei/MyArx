@@ -25,38 +25,26 @@ import ArxivUrlParser
 
 main :: Effect Unit
 main = do
-  log "Hello sailor!"
-  currentDomain >>= log
-  void $ setTimeout 2000 swapArxivAnchors
+  log "Running Arxiv abstract rewriter!"
+  void $ setTimeout  500 swapArxivAnchors -- once for speedy connections
+  void $ setTimeout 1500 swapArxivAnchors -- once for slow connections
+  void $ setTimeout 2500 swapArxivAnchors -- ...maybe twice for extra slow connections
 
-currentDomain :: Effect String
-currentDomain = window >>= (location >=> hostname)
 
-inArxiv :: String -> Boolean
-inArxiv s = s == "arxiv.org"
-
-getAnchors :: Document -> Effect HTMLCollection
-getAnchors = getElementsByTagName "a"
+inArxiv :: Effect Boolean
+inArxiv = window >>= (location >=> hostname >=> ((eq "arxiv.org") >>> pure))
 
 swapArxivAnchors :: Effect Unit
-swapArxivAnchors = unlessM (inArxiv <$> currentDomain) do
-  log "in something not arxiv"
-  window >>= document >>= toDocument >>> getAnchors >>= toArray >>= flip foreachE processLink
+swapArxivAnchors = unlessM (inArxiv) $
+  window >>= document >>= toDocument >>> getElementsByTagName "a" >>= toArray >>= flip foreachE processLink
   where
     processLink :: Element -> Effect Unit
-    processLink a = runMaybeT (getLink a) >>= case _ of
+    processLink a = getAttribute "href" a >>= case _ of
       Nothing -> pure unit
-      Just link -> do
-        log link
-        runExceptT (rewritePDFlinks a link) >>= case _ of
-          Left err ->pure unit
-          Right _ -> log $ "rewrote " <> link
+      Just link -> runExceptT (runArxivParser link) >>= case _ of
+        Left err -> pure unit
+        Right (Tuple atype aid) -> when (atype == PDF) do
+          setAttribute "href" (absURL aid) a
+          log $ "rewrote " <> link <> " -> " <> absURL aid
 
-    getLink :: Element -> MaybeT Effect String
-    getLink anchor = MaybeT $ getAttribute "href" anchor
-
-    rewritePDFlinks :: Element -> String -> ExceptT String Effect Unit
-    rewritePDFlinks a s = do
-      Tuple atype aid <- runArxivParser s
-      if (atype == PDF) then (lift $ setAttribute "href" (absURL aid) a) else throwError "skipped abstract link"
 

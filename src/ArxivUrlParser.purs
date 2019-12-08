@@ -1,6 +1,6 @@
 module ArxivUrlParser where
 
-import Prelude (class Eq, class Applicative, Unit, bind, discard, pure, show, void, ($), (*>), (<$>), (<<<), (<>), (==))
+import Prelude (class Eq, class Applicative, Unit, bind, discard, pure, show, void, when, ($), (*>), (<$>), (<<<), (<>), (==))
 import Control.Alt ((<|>))
 import Control.Monad.Except.Trans (ExceptT(..))
 import Data.Either (Either(..), either)
@@ -42,7 +42,8 @@ arxivParser = protocol *> domain *> page
       void (char '/')
       l <- fromCharArray <$> Array.many digit
       void (char '.')
-      r <- fromCharArray <$> Array.many digit
+      r <- fromCharArray <$> Array.many (digit <|> char 'v')
+      when (stype == "abs") (optional $ string ".pdf")
       pure $ Tuple (if stype == "pdf" then PDF else Abstract) (ArxivId $ l <> "." <> r)
 
 runArxivParser :: forall m . Applicative m => String -> ExceptT String m (Tuple PageType ArxivId)
