@@ -1,5 +1,5 @@
 {
-    "name": "arxiv-utils",
+    "name": "MyArx",
     "version": "1.4",
     "description": "Meaningful titles for tabs and PDF downloads!",
     "background": {
@@ -14,7 +14,7 @@
         "http://*/*",
         "https://*/*"
       ],
-      "js": ["myarxiv.js"],
+      "js": ["myarx.js"],
       "run_at": "document_idle"
     }],
     "browser_action": {

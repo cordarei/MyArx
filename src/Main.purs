@@ -1,47 +1,27 @@
 module Main where
 
-import Prelude (Unit, discard, eq, flip, pure, unit, unlessM, void, when, ($), (<>), (==), (>=>), (>>=), (>>>))
-import Control.Monad.Except.Trans (runExceptT)
-import Data.Either (Either(..))
-import Data.Maybe (Maybe(Just, Nothing))
-import Data.Tuple (Tuple(Tuple))
-import Effect (Effect, foreachE)
+import Prelude (Unit, discard, void, (*>), ($))
+import Control.Bind (ifM)
+import Effect (Effect)
 import Effect.Console (log)
 import Effect.Timer (setTimeout)
 
-import Web.DOM.Document (getElementsByTagName)
-import Web.DOM.Element (Element, getAttribute, setAttribute)
-import Web.DOM.HTMLCollection (toArray)
-import Web.HTML (window)
-import Web.HTML.HTMLDocument (toDocument)
-import Web.HTML.Location (hostname)
-import Web.HTML.Window (location, document)
-
-import ArxivUrlParser (PageType(..), absURL, runArxivParser)
-
+import MyArx.Arxiv (inArxiv)
+import MyArx.Arxiv.Abstract (abstractRewriter)
+import MyArx.Arxiv.Pdf.Redirector (pdfRedirector)
+{-- import MyArx.Arxiv.Pdf.Viewer () --}
+import MyArx.Arxiv.Pdf.LinkRewriter (swapArxivAnchors)
 
 main :: Effect Unit
-main = do
-  log "Running Arxiv abstract rewriter!"
-  void $ setTimeout  500 swapArxivAnchors -- once for speedy connections
-  void $ setTimeout 1500 swapArxivAnchors -- once for slow connections
-  void $ setTimeout 2500 swapArxivAnchors -- ...maybe twice for extra slow connections
-
-
-inArxiv :: Effect Boolean
-inArxiv = window >>= (location >=> hostname >=> ((eq "arxiv.org") >>> pure))
-
-swapArxivAnchors :: Effect Unit
-swapArxivAnchors = unlessM (inArxiv) $
-  window >>= document >>= toDocument >>> getElementsByTagName "a" >>= toArray >>= flip foreachE processLink
+main = log "MyArx is running" *> ifM inArxiv inArxivAction outsideArxivAction
   where
-    processLink :: Element -> Effect Unit
-    processLink a = getAttribute "href" a >>= case _ of
-      Nothing -> pure unit
-      Just link -> runExceptT (runArxivParser link) >>= case _ of
-        Left err -> pure unit
-        Right (Tuple atype aid) -> when (atype == PDF) do
-          setAttribute "href" (absURL aid) a
-          log $ "rewrote " <> link <> " -> " <> absURL aid
+    inArxivAction = void do
+      abstractRewriter
+      pdfRedirector
+    outsideArxivAction = do
+      log "MyArx is scanning for pdf links to redirect"
+      void $ setTimeout  500 swapArxivAnchors -- once for speedy connections
+      void $ setTimeout 1500 swapArxivAnchors -- once for slow connections
+      void $ setTimeout 2500 swapArxivAnchors -- ...maybe twice for extra slow connections
 
 

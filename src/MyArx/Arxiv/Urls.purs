@@ -1,8 +1,8 @@
-module ArxivUrlParser where
+module MyArx.Arxiv.Urls where
 
 import Prelude (class Eq, class Applicative, Unit, bind, discard, pure, show, void, when, ($), (*>), (<$>), (<<<), (<>), (==))
 import Control.Alt ((<|>))
-import Control.Monad.Except.Trans (ExceptT(..))
+import Control.Monad.Except.Trans (ExceptT(..), runExceptT)
 import Data.Either (Either(..), either)
 import Data.Tuple (Tuple(Tuple))
 
@@ -46,8 +46,11 @@ arxivParser = protocol *> domain *> page
       when (stype == "abs") (optional $ string ".pdf")
       pure $ Tuple (if stype == "pdf" then PDF else Abstract) (ArxivId $ l <> "." <> r)
 
-runArxivParser :: forall m . Applicative m => String -> ExceptT String m (Tuple PageType ArxivId)
-runArxivParser s = ExceptT $ pure stringErrParser
+runArxivParser :: forall m . Applicative m => String -> m (Either String (Tuple PageType ArxivId))
+runArxivParser = runExceptT <<< runArxivParserT
+
+runArxivParserT :: forall m . Applicative m => String -> ExceptT String m (Tuple PageType ArxivId)
+runArxivParserT s = ExceptT $ pure stringErrParser
   where
     stringErrParser :: Either String (Tuple PageType ArxivId)
     stringErrParser = either (Left <<< show) Right $ runParser s arxivParser
