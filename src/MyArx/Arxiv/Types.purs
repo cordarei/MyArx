@@ -16,7 +16,10 @@ instance showArxivId :: Show ArxivId where
    show (ArxivId i) = i
 
 absURL :: ArxivId -> String
-absURL (ArxivId i)= "https://www.arxiv.org/abs/" <> i
+absURL (ArxivId i) = "https://www.arxiv.org/abs/" <> i
+
+pdfURL :: ArxivId -> String
+pdfURL (ArxivId i) = "https://arxiv.org/pdf/" <> i <> ".pdf"
 
 newtype FirstAuthor = FirstAuthor String
 derive instance eqFirstAuthor :: Eq FirstAuthor
