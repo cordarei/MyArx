@@ -1,4 +1,4 @@
-module Main where
+module MyArx.Content.Main where
 
 import Prelude -- (Unit, discard, void, (*>), ($), bind)
 import Control.Bind (ifM)

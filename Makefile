@@ -1,19 +1,22 @@
 .PHONY: build
 
-build-firefox: make-extension-folder build move-firefox-manifest move-icons
+build-firefox: make-extension-folder build move-static
 
 make-extension-folder:
 	mkdir -p extension
 
-build:
-	pulp browserify --to extension/myarx.js
+move-static:
+	cp -f static/manifest.json && cp -f static/pdfviewer.html extension/ && cp -f static/*.png extension/
 
-move-firefox-manifest:
-	cp -f manifest.json extension/manifest.json && cp -f static/pdfviewer.html extension/
+build: build-content build-background
+build-content:
+	pulp browserify -O --main MyArx.Content.Main    --to extension/content.js
+build-background:
+	pulp browserify -O --main MyArx.Background.Main --to extension/background.js
 
-move-icons:
-	cp -f static/*.png extension/
 
-watch-and-fx:
-	pulp --watch --before clear --then 'make build-firefox && echo "Deployed! open about:debugging#/runtime/this-firefox"' --else 'Failed' build
+watch-content:
+	pulp --watch --before clear --then 'make build-conten' --else 'echo Failed' build
+watch-background:
+	pulp --watch --before clear --then 'make build-background' --else 'echo Failed' build
 
