@@ -1,6 +1,6 @@
 {
     "name": "MyArx",
-    "version": "2.0",
+    "version": "2.0.0",
     "description": "Meaningful titles for tabs and PDF downloads!",
     "background": {
         "scripts": ["background.js"]
