@@ -1,6 +1,6 @@
 module MyArx.Content.Main where
 
-import Prelude (Unit, bind, discard, pure, void, ($), (<$>), (>>=))
+import Prelude -- (Unit, bind, discard, pure, void, ($), (<$>), (>>=))
 import Effect (Effect)
 import Effect.Console (log)
 import Effect.Aff (launchAff_)
@@ -12,6 +12,7 @@ import Web.HTML.HTMLDocument (toDocument)
 import Control.Monad.Except.Trans (runExceptT)
 
 import MyArx.Arxiv -- (inArxiv, currentDocument, currentId)
+import MyArx.Arxiv.Types
 import MyArx.Arxiv.Abstract (abstractRewriter)
 import MyArx.Arxiv.Queries (getMeta)
 import MyArx.Arxiv.Pdf.LinkRewriter (swapArxivAnchors)
@@ -20,7 +21,7 @@ main :: Effect Unit
 main = do
   log "MyArx is running"
   direct >>= case _ of
-    InContainer -> log $ "something unexpected happened. Domain is empty"
+    InContainer -> pure mempty
     OutsideArxiv -> do
       doc <- toDocument <$> currentDocument
       log "MyArx is scanning for pdf links to redirect"

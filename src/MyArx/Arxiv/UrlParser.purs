@@ -1,6 +1,7 @@
 module MyArx.Arxiv.UrlParser where
 
 import Prelude
+import Debug.Trace
 import Control.Alt ((<|>))
 import Control.Monad.Except.Trans (ExceptT(..), runExceptT)
 import Data.Either (Either(..), either)
@@ -10,51 +11,67 @@ import Data.String.CodeUnits (fromCharArray)
 import Text.Parsing.Parser (Parser, runParser)
 import Text.Parsing.Parser.Combinators (optional, try)
 import Text.Parsing.Parser.String (char, string)
-import Text.Parsing.Parser.Token (digit)
+import Text.Parsing.Parser.Token (digit, alphaNum)
 
 import MyArx.Arxiv.Types
 
-arxivParser :: Parser String UrlMetadata
-arxivParser = protocol *> domain *> page
-  where
-    protocol :: Parser String Unit
-    protocol = do
-      void (string "http")
-      optional (char 's')
-      void (string "://")
+protocol :: Parser String Unit
+protocol = void $ (string "http") *> optional (char 's') *> (string "://")
 
-    domain :: Parser String Unit
-    domain = do
-      optional ((string "www.") <|> (string "export."))
-      void (string "arxiv.org/")
+arxivDomain :: Parser String Unit
+arxivDomain = do
+  optional ((string "www.") <|> (string "export."))
+  void (string "arxiv.org/")
 
-    page :: Parser String UrlMetadata
-    page = do
-      stype <- try (string "pdf") <|> string "abs"
-      void (char '/')
-      l <- fromCharArray <$> Array.many digit
-      void (char '.')
-      r <- fromCharArray <$> Array.many (digit <|> char 'v')
-      when (stype == "abs") (optional $ string ".pdf")
-      pure
-        { pageType: if stype == "pdf" then PDF else Abstract
-        , arxivId: ArxivId $ l <> "." <> r
-        }
+uri2PageType :: Parser String PageType
+uri2PageType = do
+  stype <- try (string "pdf") <|> string "abs"
+  void (char '/')
+  pure $ if stype == "pdf" then PDF else Abstract
 
-runArxivParser
-  :: forall m
+arxivUri :: Parser String UrlMetadata
+arxivUri = do
+  pt <- uri2PageType
+  l <- fromCharArray <$> Array.many digit
+  void (char '.')
+  r <- fromCharArray <$> Array.many (digit <|> char 'v')
+  when (pt == Abstract) (optional $ string ".pdf")
+  pure
+    { pageType: pt
+    , arxivId: ArxivId $ l <> "." <> r
+    }
+
+arxivUrl :: Parser String UrlMetadata
+arxivUrl = protocol *> arxivDomain *> arxivUri
+
+mozext :: Parser String Unit
+mozext = do
+  void $ string "moz-extension://"
+  void $ Array.many (alphaNum <|> char '-')
+
+
+pdfviewerWithTarget :: Parser String Unit
+pdfviewerWithTarget = void $ string "/pdfviewer.html?target="
+
+viewerUrl :: Parser String UrlMetadata
+viewerUrl = mozext *> pdfviewerWithTarget *> arxivUrl
+
+runMyArxParser
+  :: forall m r
   .  Applicative m
-  => String
-  -> m (Either String UrlMetadata)
-runArxivParser = runExceptT <<< runArxivParserT
+  => Parser String r
+  -> String
+  -> m (Either String r)
+runMyArxParser p s = (runExceptT <<< runMyArxParserT p) (spy "running parser" s)
 
-runArxivParserT
-  :: forall m
+runMyArxParserT
+  :: forall m r
   .  Applicative m
-  => String
-  -> ExceptT String m UrlMetadata
-runArxivParserT s = ExceptT $ pure
+  => Parser String r
+  -> String
+  -> ExceptT String m r
+runMyArxParserT p s = ExceptT $ pure
   $ either (Left <<< show) Right
-  $ runParser s arxivParser
+  $ runParser s p
 
 

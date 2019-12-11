@@ -11,6 +11,7 @@ import Web.DOM.ParentNode
 import Web.DOM.Element
 import Web.DOM.Node
 import Web.DOM.NodeList
+import Web.DOM.HTMLCollection as HTML
 import Web.HTML.HTMLDocument (HTMLDocument, toDocument)
 import Web.HTML.HTMLDocument as HTML
 
@@ -21,8 +22,10 @@ import Data.Maybe
 import Effect.Class (liftEffect)
 import Control.Monad
 import Control.Monad.Except.Trans (runExceptT)
+import Control.Monad.Maybe.Trans
+import Control.Monad.Trans.Class
 
-import MyArx.Arxiv (currentId)
+import MyArx.Arxiv (currentId, setTitle)
 import MyArx.Arxiv.Types
 import MyArx.Arxiv.Queries
 
@@ -33,10 +36,6 @@ abstractRewriter
 abstractRewriter doc md = do
   setTitle doc md.ex.title md.url.pageType
   addAllLinks (toDocument doc) md.url.arxivId md.ex
-
-setTitle :: HTMLDocument -> Title -> PageType -> Effect Unit
-setTitle doc title typ
-  = HTML.setTitle (show title <> " | " <> show typ) doc
 
 addAllLinks
   :: Document
@@ -51,6 +50,8 @@ addAllLinks doc aid md
     Nothing ->
       log "Error: Items selected by '.full-text > ul' not found"
     Just ul -> do
+      getElementsByTagName "a" ul >>= HTML.item 0 >>= runUpdatePDFLink
+
       let addLink = appendOne ul
       makeListItemWithCallback doc
         ("https://arxiv.org/pdf/" <> show aid <> ".pdf?download")
@@ -64,13 +65,22 @@ addAllLinks doc aid md
         "Viewer"
         >>= addLink
       makeListItem doc
-        ("https://arxiv.org/pdf/" <> show aid <> ".pdf?abstract")
-        "Abstract Redirect"
-        >>= addLink
-      makeListItem doc
         ("https://www.arxiv-vanity.com/papers/" <> show aid)
         "Arxiv-Vanity"
         >>= addLink
+
+updatePDFLink :: Maybe Element -> MaybeT Effect Unit
+updatePDFLink ma = do
+  a <- MaybeT (pure ma)
+  href <- MaybeT $ getAttribute "href" a
+  lift $ setAttribute "href" (href <> "?noredirect") a
+
+runUpdatePDFLink :: Maybe Element -> Effect Unit
+runUpdatePDFLink ma =
+  runMaybeT (updatePDFLink ma)
+  >>= maybe
+    (log "impossible: '.full-text > ul' returned list, but first anchor 'PDF' malformed")
+    (const $ log "updated pdf link")
 
 
 appendOne :: Element -> Node -> Effect Unit

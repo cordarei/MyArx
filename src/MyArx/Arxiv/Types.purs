@@ -2,6 +2,16 @@ module MyArx.Arxiv.Types where
 
 import Prelude
 
+data MyArxState
+  = InArxiv
+  | OutsideArxiv
+  | InContainer
+
+instance showMyArxState :: Show MyArxState where
+  show InArxiv = "InArxiv"
+  show OutsideArxiv = "OutsideArxiv"
+  show InContainer = "InContainer"
+
 type URL = String
 
 data PageType = PDF | Abstract

@@ -26,7 +26,7 @@ import Data.String.Common (split)
 import Data.String.Pattern (Pattern(..))
 
 import MyArx.Arxiv.Types
-  (ArxivId(..), ExportMetadata, FirstAuthor(..), PublishYear(..), Title(..))
+  {-- (ArxivId(..), ExportMetadata, FirstAuthor(..), PublishYear(..), Title(..)) --}
 
 
 getExport :: ArxivId -> ExceptT String Aff Document
@@ -36,6 +36,10 @@ getExport (ArxivId aid) = do
       >>= either (pure <<< Left <<< printError) (pure <<< Right)
   ExceptT $ liftEffect (makeDOMParser >>= parseXMLFromString res.body)
 
+getAllMeta :: UrlMetadata -> ExceptT String Aff Metadata
+getAllMeta url = do
+  ex <- getMeta url.arxivId
+  pure { url:url, ex:ex }
 
 getMeta :: ArxivId -> ExceptT String Aff ExportMetadata
 getMeta aid = do

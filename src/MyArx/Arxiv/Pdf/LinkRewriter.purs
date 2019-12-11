@@ -13,7 +13,7 @@ import Web.DOM.Document (Document, getElementsByTagName)
 import Web.DOM.Element (Element, getAttribute, setAttribute)
 import Web.DOM.HTMLCollection (toArray)
 
-import MyArx.Arxiv.UrlParser (runArxivParser)
+import MyArx.Arxiv.UrlParser -- (runArxivParser)
 import MyArx.Arxiv.Types
 
 swapArxivAnchors :: Document -> Effect Unit
@@ -25,7 +25,7 @@ swapArxivAnchors
 processLink :: Element -> Effect Unit
 processLink a = getAttribute "href" a >>= case _ of
   Nothing -> pure unit
-  Just link -> runArxivParser link >>= case _ of
+  Just link -> runMyArxParser arxivUrl link >>= case _ of
     Left err -> pure unit
     Right {pageType: atype, arxivId: aid} ->
       when (atype == PDF) do
