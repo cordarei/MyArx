@@ -3,7 +3,11 @@
 // module MyArx.Arxiv.Pdf.Redirector
 
 function listenBeforeRequestsImpl (urlPatterns, listener) {
-  console.log("[myarx]", "listenBeforeRequestsImpl", urlPatterns)
+  console.log(
+    "[myarx]",
+    "triggering foreign `chrome.webRequest.onBeforeRequest.addListener`",
+    "urls", urlPatterns
+  );
   chrome.webRequest.onBeforeRequest.addListener(
     listener,
     { urls: urlPatterns },
@@ -13,8 +17,12 @@ function listenBeforeRequestsImpl (urlPatterns, listener) {
 exports.listenBeforeRequestsImpl = listenBeforeRequestsImpl;
 
 function getUrlImpl(url) {
-  console.log("[myarx]", "getUrl", url)
-  chrome.runtime.getURL(url);
+  console.log(
+    "[myarx]",
+    "triggering foreign `getUrl`",
+    "url", url
+  );
+  return chrome.runtime.getURL(url);
 };
 exports.getUrlImpl = getUrlImpl;
 

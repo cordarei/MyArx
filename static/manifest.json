@@ -14,7 +14,8 @@
         "http://*/*",
         "https://*/*"
       ],
-      "js": ["myarx.js"],
+      "exclude_matches": ["*://arxiv.org/abs/*"],
+      "js": ["content.js"],
       "run_at": "document_idle"
     }],
     "browser_action": {

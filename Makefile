@@ -6,7 +6,7 @@ make-extension-folder:
 	mkdir -p extension
 
 move-static:
-	cp -f static/manifest.json && cp -f static/pdfviewer.html extension/ && cp -f static/*.png extension/
+	cp -f static/manifest.json extension/ && cp -f static/pdfviewer.html extension/ && cp -f static/*.png extension/
 
 build: build-content build-background
 build-content:

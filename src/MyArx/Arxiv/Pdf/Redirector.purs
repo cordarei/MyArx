@@ -3,19 +3,16 @@ module MyArx.Arxiv.Pdf.Redirector where
 import Prelude
 import Effect
 import Effect.Console
+import Effect.Uncurried
 import Data.Maybe
+import Foreign
 import Control.Monad
 import Data.Array.NonEmpty
 import Data.String.Pattern
-import Data.Function.Uncurried
+import Data.Either
 
 import MyArx.Arxiv.Types
-
-pdfRedirector :: Effect Unit
-pdfRedirector = do
-  log $ show $ Pattern redirectPattern
-  log $ "starting redirection"
-  redirectToPdfViewer
+import MyArx.Arxiv.UrlParser 
 
 
 pdfviewer = "pdfviewer.html"
@@ -23,7 +20,7 @@ pdfviewerTarget = "pdfviewer.html?target="
 
 redirectPattern = "*://arxiv.org/*.pdf"
 --absRedirectPattern = "*://arxiv.org/*.pdf?abstract"
-viewerRedirectPattern = "*://arxiv.org/*.pdf?viewer"
+{-- viewerRedirectPattern = "*://arxiv.org/*.pdf?viewer" --}
 
 getType :: UrlMetadata -> PageType
 getType md = md.pageType
@@ -32,7 +29,7 @@ getId :: UrlMetadata -> ArxivId
 getId md = md.arxivId
 
 type Details =
-  { documentUrl :: Maybe String
+  { documentUrl :: Foreign -- String
   -- ^ URL of the document in which the resource will be loaded. For example, if
   -- the web page at "https://example.com" contains an image or an iframe, then
   -- the documentUrl for the image or iframe will be "https://example.com". For
@@ -42,11 +39,14 @@ type Details =
   }
 
 foreign import listenBeforeRequestsImpl
-    :: Fn2 (NonEmptyArray Pattern) (Fn1 Details (Effect (Maybe {redirectUrl::String}))) (Effect Unit)
+    :: forall e . EffectFn2
+        (NonEmptyArray Pattern)
+        (EffectFn1 Details (Maybe {redirectUrl::String}))
+        Unit
       -- Really returns a webRequest.BlockingResponse:
       -- https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/BlockingResponse
 
-foreign import getUrlImpl :: Fn1 String (Effect Unit)
+foreign import getUrlImpl :: EffectFn1 String String
 
 
 -- Redirect to custom PDF page.
@@ -56,24 +56,25 @@ foreign import getUrlImpl :: Fn1 String (Effect Unit)
 --       we capture only the last url (the one that ends with '.pdf').
 -- Redirect the PDF page to custom PDF container page.
 redirectToPdfViewer :: Effect Unit
-redirectToPdfViewer = runFn2 listenBeforeRequestsImpl (singleton $ Pattern redirectPattern) (mkFn1 redirect)
+redirectToPdfViewer = runEffectFn2 listenBeforeRequestsImpl (singleton $ Pattern redirectPattern) (mkEffectFn1 redirect)
   where
     redirect :: Details -> Effect (Maybe {redirectUrl::String})
     redirect details = do
-       log $ show details.documentUrl <> " \t " <> details.url
-       maybe
-        -- Request from this plugin itself (embedded PDF).
-        (pure Nothing) go details.documentUrl
-      where
-        url :: URL
-        url = pdfviewerTarget <> details.url
+      -- Request from this plugin itself (embedded PDF).
+      -- if isNull details.documentUrl || isUndefined details.documentUrl
+      -- then pure Nothing
+      runArxivParser details.url >>= case _ of
+        Left err -> log err *> pure Nothing
+        Right md -> do
+          url' <- runEffectFn1 getUrlImpl (pdfviewerTarget <> pdfURL md.arxivId)
+          log $ "Redirecting: " <> details.url <> " to " <> url'
+          pure $ Just { redirectUrl : url' }
 
-        go :: String -> Effect (Maybe {redirectUrl::String})
-        go detailsurl = do
-          log $ "Redirecting: " <> detailsurl <> " to " <> url
-          -- getUrlImpl url
-          pure $ Just { redirectUrl: url }
-
+pdfRedirector :: Effect Unit
+pdfRedirector = do
+  log $ show $ Pattern redirectPattern
+  log $ "starting redirection"
+  redirectToPdfViewer
 
 -- =============== BUTTON STUFF ================ --
 -- -- Listen for any changes to the URL of any tab.
