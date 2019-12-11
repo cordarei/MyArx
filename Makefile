@@ -19,3 +19,5 @@ build-pdfviewer:
 watch:
 	pulp --watch --before clear --then 'make build' --else 'echo Failed' build
 
+package: build
+	tar cf myarx.tar extension/

@@ -15,3 +15,4 @@ output
 
 # End of https://www.gitignore.io/api/purescript
 package-lock.json
+myarx.tar
