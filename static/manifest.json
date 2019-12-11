@@ -1,6 +1,6 @@
 {
     "name": "MyArx",
-    "version": "1.4",
+    "version": "2.0",
     "description": "Meaningful titles for tabs and PDF downloads!",
     "background": {
         "scripts": ["background.js"]
@@ -9,22 +9,7 @@
         "matches": ["*://arxiv.org/abs/*"],
         "js": ["content.js"],
         "run_at": "document_idle"
-    }, {
-      "matches": [
-        "http://*/*",
-        "https://*/*"
-      ],
-      "exclude_matches": ["*://arxiv.org/abs/*"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
     }],
-    "browser_action": {
-        "default_icon": {
-            "16": "icon16.png",
-            "32": "icon32.png"
-        },
-        "default_title": "Open Abstract / PDF"
-    },
     "permissions": [
         "tabs",
         "activeTab",

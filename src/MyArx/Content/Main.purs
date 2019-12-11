@@ -22,12 +22,11 @@ main = do
   log "MyArx is running"
   direct >>= case _ of
     InContainer -> pure mempty
-    OutsideArxiv -> do
-      doc <- toDocument <$> currentDocument
-      log "MyArx is scanning for pdf links to redirect"
-      void $ setTimeout  500 (swapArxivAnchors doc) -- speedy connections
-      void $ setTimeout 1500 (swapArxivAnchors doc) -- slow connections
-      void $ setTimeout 2500 (swapArxivAnchors doc) -- ...also extra slow ones
+
+    -- originally this was supposed to overwrite pdf links, but the webRequest
+    -- listener handles this more gracefully.
+    OutsideArxiv -> pure mempty
+
     InArxiv -> launchAff_ $ runExceptT go >>= case _ of
       Left err -> liftEffect $ log err
       Right rt -> liftEffect $ abstractRewriter rt.doc rt.md

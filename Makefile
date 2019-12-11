@@ -1,4 +1,4 @@
-.PHONY: build
+.PHONY: build clean package watch
 
 build-firefox: make-extension-folder build move-static
 
@@ -19,5 +19,12 @@ build-pdfviewer:
 watch:
 	pulp --watch --before clear --then 'make build' --else 'echo Failed' build
 
-package: build
-	tar cf myarx.tar extension/
+package: clean move-static build
+	cd extension && zip -r myarx.zip *
+
+clean: extension
+	rm -rf extension/*
+
+package-from-scratch:
+	bower install && make package
+
