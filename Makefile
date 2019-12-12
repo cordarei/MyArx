@@ -1,7 +1,5 @@
 .PHONY: build clean package watch purge
 
-build-firefox: make-extension-folder build move-static
-
 make-extension-folder:
 	mkdir -p extension
 
@@ -19,7 +17,7 @@ build-pdfviewer:
 watch:
 	pulp --watch --before clear --then 'make build' --else 'echo Failed' build
 
-package: clean move-static build
+package: clean make-extension-folder move-static build
 	cd extension && zip -r myarx.zip *
 
 clean:
@@ -27,6 +25,9 @@ clean:
 
 purge: clean
 	rm -rf output && rm -rf node_modules && rm -rf bower_components
+
+nuke: purge
+	git clean -fx
 
 package-from-scratch:
 	bower install && make package
