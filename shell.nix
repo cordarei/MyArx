@@ -1,5 +1,5 @@
-with (import <nixos> {});
+with (import ./nix/pin/nixpkgs.nix {});
 
 mkShell {
-  buildInputs = with pkgs.nodePackages; [ nodejs purescript grunt-cli bower pulp ];
+  buildInputs = with pkgs.nodePackages; [ nodejs purescript bower pulp ];
 }
