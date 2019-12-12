@@ -17,5 +17,16 @@ Features not included from [arxiv-utils](https://github.com/j3soon/arxiv-utils):
 - The browser button to toggle views
 - Retitling support in bookmarks
 
+## Installation
+
+Build scripts are all found in the `Makefile`. If you have [nix](https://nixos.org/nix/), all non-js dependencies are
+available in `shell.nix`. Otherwise you will need `node`, `npm`, `bower`, `purescript`, and `pulp`.
+
+```
+make package-from-scratch
+```
+
+Will build all packages and output a zip in `extension/`. You can either install the `extension/` directory or the
+output `myarx.zip` file.
 
 

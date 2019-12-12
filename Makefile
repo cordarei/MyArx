@@ -1,4 +1,4 @@
-.PHONY: build clean package watch
+.PHONY: build clean package watch purge
 
 build-firefox: make-extension-folder build move-static
 
@@ -22,8 +22,11 @@ watch:
 package: clean move-static build
 	cd extension && zip -r myarx.zip *
 
-clean: extension
+clean:
 	rm -rf extension/*
+
+purge: clean
+	rm -rf output && rm -rf node_modules && rm -rf bower_components
 
 package-from-scratch:
 	bower install && make package
