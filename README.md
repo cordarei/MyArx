@@ -7,7 +7,7 @@ Features:
 - Redirects all pdf links to abstracts. To bypass add "?" to the end of the pdf link.
 - Removes the arxiv id from the abstract page's title
 - Adds the following buttons to the abstract page:
-  - "Direct Download" -- download link in format "<title>, <author1>, et.al, <publishyear>.pdf"
+  - "Direct Download" -- download link in format `<title>, <author1>, et.al, <publishyear>.pdf`
   - "Viewer" -- this makes the title of the pdf viewer identical to the page title
   - "Arxiv Vanity" -- A link to a mobile-friendly arxiv-vanity version of the paper
 
