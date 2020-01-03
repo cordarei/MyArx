@@ -1,6 +1,6 @@
 "use strict";
 
-// module MyArx.Arxiv.Pdf.Redirector
+// module MyArx.Foreign
 
 function listenBeforeRequestsImpl (urlPatterns, listener) {
   console.log(
