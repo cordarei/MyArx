@@ -1,4 +1,4 @@
-module MyArx.Arxiv.Pdf.Redirector where
+module MyArx.Foreign where
 
 import Prelude
 import Effect
@@ -11,8 +11,6 @@ import Data.Either
 import Data.String.Pattern
 import Data.Maybe
 
-{-- import MyArx.Arxiv.Types --}
-{-- import MyArx.Arxiv.UrlParser --}
 
 
 type Details =
@@ -33,10 +31,10 @@ foreign import listenBeforeRequestsImpl
 
 foreign import getUrlImpl :: EffectFn1 String String
 
-getUrl :: String -> String -> Effect Unit
+getUrl :: String -> Effect String
 getUrl = runEffectFn1 getUrlImpl
 
-listenBeforeRequests :: Pattern -> (ArxivId -> Effect String) -> Effect Unit
+listenBeforeRequests :: Pattern -> (Details -> Effect {redirectUrl :: String}) -> Effect Unit
 listenBeforeRequests pattern callback
   = runEffectFn2
       listenBeforeRequestsImpl
